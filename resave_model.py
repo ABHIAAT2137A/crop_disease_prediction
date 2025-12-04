@@ -1,18 +1,32 @@
-# resave_model.py
 import pickle
-import os
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestClassifier
 
-SRC = "wheat_model.pkl"    # the existing pickle you have locally
-DST = "wheat_model.pkl"    # we overwrite in place (or change DST if you prefer)
+# Load your CSV again and retrain the model correctly
 
-if not os.path.exists(SRC):
-    raise FileNotFoundError(f"{SRC} not found. Put your existing pickle in repo root first.")
+df = pd.read_csv("wheat_crop_dataset_final_120_rows.csv")
 
-with open(SRC, "rb") as f:
-    data = pickle.load(f)
+stage_encoder = LabelEncoder()
+disease_encoder = LabelEncoder()
 
-# re-dump with protocol 4 for broad compatibility on Streamlit
-with open(DST, "wb") as f:
+df["crop_stage"] = stage_encoder.fit_transform(df["crop_stage"])
+df["crop_disease"] = disease_encoder.fit_transform(df["crop_disease"])
+
+X = df[["crop_stage", "days_since_sowing"]]
+y = df["crop_disease"]
+
+model = RandomForestClassifier(n_estimators=200, random_state=42)
+model.fit(X, y)
+
+# Save with protocol=4 (maximum compatibility)
+data = {
+    "model": model,
+    "stage_encoder": stage_encoder,
+    "disease_encoder": disease_encoder
+}
+
+with open("wheat_model.pkl", "wb") as f:
     pickle.dump(data, f, protocol=4)
 
-print("Re-saved pickle with protocol=4 to", DST)
+print("New wheat_model.pkl saved successfully!")
